@@ -46,12 +46,15 @@ def multiple_reports_307096():
 
 @pytest.fixture
 def single_report():
-    return """AAXX 21121
-15001 05515 32931 10103 21090 39765 42250 57020 60071 72006 82110 91155
- 222// 06070 20502 333 10178 21073 34101 55055 00010 20003 30002 50001 60004
- 60035 70500 83145 81533 91008 91111
- 444 18031 22053
-    """
+    return """
+AAXX 21121
+15001
+05515 32931 10103 21090 39765 42250 57020 60071 72006 82110 91155
+222// 06070 20502
+333 10178 21073 34101 55055 00010 20003 30002 50001 60004 60035 70500 83145
+    81533 91008 91111
+444 18031 22053=
+"""
 
 
 @pytest.fixture
@@ -265,7 +268,7 @@ def test_range_qc(metadata_string):
     for item in result:
         warning_msgs = item["_meta"]["result"]["warnings"]
 
-    assert "#1#nonCoordinatePressure: Value (47650.0) out of valid range (50000 - 108000).; Element set to missing" in warning_msgs  # noqa
+    assert "#1#nonCoordinatePressure: Value (147650.0) out of valid range (50000 - 108000).; Element set to missing" in warning_msgs  # noqa
     assert "#1#airTemperature: Value (334.15) out of valid range (193.15 - 333.15).; Element set to missing" in warning_msgs  # noqa
     assert "#1#dewpointTemperature: Value (192.15) out of valid range (193.15 - 308.15).; Element set to missing" in warning_msgs  # noqa
     assert "#1#windSpeed: Value (80.0) out of valid range (0.0 - 75).; Element set to missing" in warning_msgs  # noqa
