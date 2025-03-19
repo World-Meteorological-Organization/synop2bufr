@@ -881,7 +881,8 @@ def parse_synop(message: str, year: int, month: int) -> dict:
                         _unit = None
                     if None not in (rad, _time, _unit):
                         fld_name = f'{v["fld_name"]}_{_time}hr'
-                        #  Convert to J/m^2,rounding to 1000s of J/m^2 (B/C1.12.2)
+                        #  Convert to J/m^2, rounding to 1000s of J/m^2
+                        #  (B/C1.12.2)
                         output[fld_name] = v['sign'] * round(rad_convert(rad, _unit),v['dp'])  # noqa
 
     #  Group 6 6RRRtR - this is the same group as that in section 1, but over
