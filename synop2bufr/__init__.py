@@ -859,15 +859,14 @@ def parse_synop(message: str, year: int, month: int) -> dict:
                 return 10000 * rad
 
         radiation_fields = {
-            'positive_net':{'fld_name': 'net_radiation', 'dp': -3, 'sign': 1},
-            'negative_net':{'fld_name': 'net_radiation', 'dp': -3, 'sign': -1},
-            'global_solar':{'fld_name': 'global_solar_radiation', 'dp': -2, 'sign': 1},
-            'diffused_solar':{'fld_name': 'diffuse_solar_radiation', 'dp': -2, 'sign': 1},
-            'downward_long_wave':{'fld_name': 'long_wave_radiation', 'dp': -4, 'sign': 1},
-            'upward_long_wave':{'fld_name': 'long_wave_radiation', 'dp': -4, 'sign': -1},
-            'short_wave':{'fld_name': 'short_wave_radiation', 'dp': -3, 'sign': 1},
-            'direct_solar':{'fld_name': 'direct_solar_radiation', 'dp': -2, 'sign': 1}}
-
+            'positive_net': {'fld_name': 'net_radiation', 'dp': -3, 'sign': 1},  # noqa
+            'negative_net': {'fld_name': 'net_radiation', 'dp': -3, 'sign': -1},  # noqa
+            'global_solar': {'fld_name': 'global_solar_radiation', 'dp': -2, 'sign': 1},  # noqa
+            'diffused_solar': {'fld_name': 'diffuse_solar_radiation', 'dp': -2, 'sign': 1},  # noqa
+            'downward_long_wave': {'fld_name': 'long_wave_radiation', 'dp': -4, 'sign': 1},  # noqa
+            'upward_long_wave': {'fld_name': 'long_wave_radiation', 'dp': -4, 'sign': -1},  # noqa
+            'short_wave': {'fld_name': 'short_wave_radiation', 'dp': -3, 'sign': 1},  # noqa
+            'direct_solar': {'fld_name': 'direct_solar_radiation', 'dp': -2, 'sign': 1}}  # noqa
 
         for k, v in radiation_fields.items():
             if k in rad_dict:
@@ -884,7 +883,6 @@ def parse_synop(message: str, year: int, month: int) -> dict:
                         fld_name = f'{v["fld_name"]}_{_time}hr'
                         #  Convert to J/m^2,rounding to 1000s of J/m^2 (B/C1.12.2)
                         output[fld_name] = v['sign'] * round(rad_convert(rad, _unit),v['dp'])  # noqa
-
 
     #  Group 6 6RRRtR - this is the same group as that in section 1, but over
     # a different time period tR
@@ -1054,23 +1052,23 @@ def parse_synop(message: str, year: int, month: int) -> dict:
 
             # Now we convert the code string to an integer, and check that
             # there aren't missing values
-            if cloud_amount != None:
+            if cloud_amount is not None:
                 output[f'cloud_amount_s4_{i+1}'] = int(cloud_amount)
             else:
                 # Missing value
                 output[f'cloud_amount_s4_{i+1}'] = 15
 
-            if cloud_genus != None:
+            if cloud_genus is not None:
                 output[f'cloud_genus_s4_{i+1}'] = int(cloud_genus)
             else:
                 # Missing value
                 output[f'cloud_genus_s4_{i+1}'] = 63
 
-            if cloud_height != None:
+            if cloud_height is not None:
                 # Multiply by 100 to get metres (B/C1.5.2.4)
                 output[f'cloud_height_s4_{i+1}'] = int(cloud_height)
 
-            if cloud_top != None:
+            if cloud_top is not None:
                 output[f'cloud_top_s4_{i+1}'] = int(cloud_top)
             else:
                 # Missing value
