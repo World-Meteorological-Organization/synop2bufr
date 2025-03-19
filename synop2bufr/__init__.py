@@ -447,14 +447,9 @@ def parse_synop(message: str, year: int, month: int) -> dict:
             output['present_weather'] = None
 
     if decoded.get('past_weather') is not None:
-        try:
-            output['past_weather_1'] = decoded['past_weather']['past_weather_1']['value']  # noqa
-        except Exception:
-            output['past_weather_1'] = None
-        try:
-            output['past_weather_2'] = decoded['past_weather']['past_weather_2']['value']  # noqa
-        except Exception:
-            output['past_weather_2'] = None
+        for idx in range(len(decoded.get('past_weather'))):
+            fld_name = f'past_weather_{idx+1}'
+            output[fld_name] = decoded['past_weather'][idx]['value']  # noqa
     else:  # Missing values
         output['past_weather_1'] = None
         output['past_weather_2'] = None
@@ -734,24 +729,21 @@ def parse_synop(message: str, year: int, month: int) -> dict:
 
     # Sunshine amount 55SSS (24hrs) and 553SS (1hr)
     if (decoded.get('sunshine') is not None):
-        if (decoded['sunshine'].get('amount') is not None):
-
-            # The time period remains in hours
+        for idx in range(len(decoded.get('sunshine'))):
             try:
-                sun_time = decoded['sunshine']['duration']['value']
+                _duration = decoded['sunshine'][idx]['duration']['value']
+                _amount = decoded['sunshine'][idx]['amount']['value']
             except Exception:
-                sun_time = None
+                _duration = None
+                _amount = None
 
-            try:
-                # Sunshine amount should be given in minutes
-                sun_amount = decoded['sunshine']['amount']['value'] * 60
-            except Exception:
-                sun_amount = None
-
-            if sun_time == 1:
-                output['sunshine_amount_1hr'] = sun_amount
-            elif sun_time == 24:
-                output['sunshine_amount_24hr'] = sun_amount
+            if _duration is not None:
+                if _duration == 1:
+                    output['sunshine_amount_1hr'] = _amount*60
+                elif _duration == 24:
+                    output['sunshine_amount_24hr'] = _amount*60
+                else:
+                    LOGGER.warning(f'Invalid sunshine duration ({_duration})')
 
     # Cloud drift data 56DLDMDH
     #  By B/C1.6.2 we must convert the direction to a degree bearing
@@ -858,146 +850,41 @@ def parse_synop(message: str, year: int, month: int) -> dict:
         # Create a function to do the appropriate conversion depending
         # on time period
 
-        def rad_convert(rad, time):
-            if time == 1:
+        def rad_convert(rad, _unit):
+            if _unit == 'kJ/m2':
                 # 1 kJ/m^2 = 1000 J/m^2
                 return 1000 * rad
-            elif time == 24:
+            elif _unit == 'J/cm2':
                 # 1 J/cm^2 = 10000 J/m^2
                 return 10000 * rad
 
-        if 'positive_net' in rad_dict:
-            try:
-                rad = rad_dict['positive_net']['value']
-                time = rad_dict['positive_net']['time_before_obs']['value']  # noqa
-            except Exception:
-                rad = None
-                time = None
-            if None not in (rad, time):
-                if time == 1:
-                    #  Convert to J/m^2,rounding to 1000s of J/m^2 (B/C1.12.2)
-                    output['net_radiation_1hr'] = round(rad_convert(rad, time), -3)  # noqa
-                elif time == 24:
-                    #  Convert to J/m^2,rounding to 1000s of J/m^2 (B/C1.12.2)
-                    output['net_radiation_24hr'] = round(rad_convert(rad, time), -3)  # noqa
+        radiation_fields = {
+            'positive_net':{'fld_name': 'net_radiation', 'dp': -3, 'sign': 1},
+            'negative_net':{'fld_name': 'net_radiation', 'dp': -3, 'sign': -1},
+            'global_solar':{'fld_name': 'global_solar_radiation', 'dp': -2, 'sign': 1},
+            'diffused_solar':{'fld_name': 'diffuse_solar_radiation', 'dp': -2, 'sign': 1},
+            'downward_long_wave':{'fld_name': 'long_wave_radiation', 'dp': -4, 'sign': 1},
+            'upward_long_wave':{'fld_name': 'long_wave_radiation', 'dp': -4, 'sign': -1},
+            'short_wave':{'fld_name': 'short_wave_radiation', 'dp': -3, 'sign': 1},
+            'direct_solar':{'fld_name': 'direct_solar_radiation', 'dp': -2, 'sign': 1}}
 
-        if 'negative_net' in rad_dict:
-            try:
-                rad = rad_dict['negative_net']['value']
-                time = rad_dict['negative_net']['time_before_obs']['value']  # noqa
-            except Exception:
-                rad = None
-                time = None
 
-            if None not in (rad, time):
-                if time == 1:
-                    #  Set negative and convert to J/m^2,rounding to 1000s
-                    # of J/m^2 (B/C1.12.2)
-                    output['net_radiation_1hr'] = -1 * round(rad_convert(rad, time), -3)  # noqa
-                elif time == 24:
-                    #  Set negative and convert to J/m^2,rounding to 1000s
-                    # of J/m^2 (B/C1.12.2)
-                    output['net_radiation_24hr'] = -1 * round(rad_convert(rad, time), -3)  # noqa
+        for k, v in radiation_fields.items():
+            if k in rad_dict:
+                for idx in range(len(rad_dict[k])):
+                    try:
+                        rad = rad_dict[k][idx]['value']
+                        _unit = rad_dict[k][idx]['unit']
+                        _time = rad_dict[k][idx]['time_before_obs']['value']  # noqa
+                    except Exception:
+                        rad = None
+                        _time = None
+                        _unit = None
+                    if None not in (rad, _time, _unit):
+                        fld_name = f'{v["fld_name"]}_{_time}hr'
+                        #  Convert to J/m^2,rounding to 1000s of J/m^2 (B/C1.12.2)
+                        output[fld_name] = v['sign'] * round(rad_convert(rad, _unit),v['dp'])  # noqa
 
-        if 'global_solar' in rad_dict:
-            try:
-                rad = rad_dict['global_solar']['value']
-                time = rad_dict['global_solar']['time_before_obs']['value']
-            except Exception:
-                rad = None
-                time = None
-
-            if None not in (rad, time):
-                if time == 1:
-                    #  Convert to J/m^2,rounding to 100s of J/m^2 (B/C1.12.2)
-                    output['global_solar_radiation_1hr'] = round(rad_convert(rad, time), -2)  # noqa
-                elif time == 24:
-                    #  Convert to J/m^2,rounding to 100s of J/m^2 (B/C1.12.2)
-                    output['global_solar_radiation_24hr'] = round(rad_convert(rad, time), -2)  # noqa
-
-        if 'diffused_solar' in rad_dict:
-            try:
-                rad = rad_dict['diffused_solar']['value']
-                time = rad_dict['diffused_solar']['time_before_obs']['value']
-            except Exception:
-                rad = None
-                time = None
-
-            if None not in (rad, time):
-                if time == 1:
-                    #  Convert to J/m^2,rounding to 100s of J/m^2 (B/C1.12.2)
-                    output['diffuse_solar_radiation_1hr'] = round(rad_convert(rad, time), -2)  # noqa
-                elif time == 24:
-                    #  Convert to J/m^2,rounding to 100s of J/m^2 (B/C1.12.2)
-                    output['diffuse_solar_radiation_24hr'] = round(rad_convert(rad, time), -2)  # noqa
-
-        if 'downward_long_wave' in rad_dict:
-            try:
-                rad = rad_dict['downward_long_wave']['value']
-                time = rad_dict['downward_long_wave']['time_before_obs']['value']  # noqa
-            except Exception:
-                rad = None
-                time = None
-
-            if None not in (rad, time):
-                if time == 1:
-                    #  Set positive and convert to J/m^2,rounding to 10000s
-                    # of J/m^2 (B/C1.12.2)
-                    output['long_wave_radiation_1hr'] = round(rad_convert(rad, time), -4)  # noqa
-                elif time == 24:
-                    #  Set positive and convert to J/m^2,rounding to 10000s
-                    # of J/m^2 (B/C1.12.2)
-                    output['long_wave_radiation_24hr'] = round(rad_convert(rad, time), -4)  # noqa
-
-        if 'upward_long_wave' in rad_dict:
-            try:
-                rad = rad_dict['upward_long_wave']['value']
-                time = rad_dict['upward_long_wave']['time_before_obs']['value']  # noqa
-            except Exception:
-                rad = None
-                time = None
-
-            if None not in (rad, time):
-                if time == 1:
-                    #  Set negative and convert to J/m^2,rounding to 10000s
-                    # of J/m^2 (B/C1.12.2)
-                    output['long_wave_radiation_1hr'] = -1 * round(rad_convert(rad, time), -4)  # noqa
-                elif time == 24:
-                    #  Set negative and convert to J/m^2,rounding to 10000s
-                    # of J/m^2 (B/C1.12.2)
-                    output['long_wave_radiation_24hr'] = -1 * round(rad_convert(rad, time), -4)  # noqa
-
-        if 'short_wave' in rad_dict:
-            try:
-                rad = rad_dict['short_wave']['value']
-                time = rad_dict['short_wave']['time_before_obs']['value']  # noqa
-            except Exception:
-                rad = None
-                time = None
-
-            if None not in (rad, time):
-                if time == 1:
-                    #  Convert to J/m^2,rounding to 1000s of J/m^2 (B/C1.12.2)
-                    output['short_wave_radiation_1hr'] = round(rad_convert(rad, time), -3)  # noqa
-                if time == 24:
-                    #  Convert to J/m^2,rounding to 1000s of J/m^2 (B/C1.12.2)
-                    output['short_wave_radiation_24hr'] = round(rad_convert(rad, time), -3)  # noqa
-
-        if 'direct_solar' in rad_dict:
-            try:
-                rad = rad_dict['direct_solar']['value']
-                time = rad_dict['direct_solar']['time_before_obs']['value']  # noqa
-            except Exception:
-                rad = None
-                time = None
-
-            if None not in (rad, time):
-                if time == 1:
-                    #  Convert to J/m^2,rounding to 100s of J/m^2 (B/C1.12.2)
-                    output['direct_solar_radiation_1hr'] = round(rad_convert(rad, time), -2)  # noqa
-                elif time == 24:
-                    #  Convert to J/m^2,rounding to 100s of J/m^2 (B/C1.12.2)
-                    output['direct_solar_radiation_24hr'] = round(rad_convert(rad, time), -2)  # noqa
 
     #  Group 6 6RRRtR - this is the same group as that in section 1, but over
     # a different time period tR
@@ -1130,14 +1017,12 @@ def parse_synop(message: str, year: int, month: int) -> dict:
     #  These are given and required to be in m/s.
 
     if decoded.get('highest_gust') is not None:
-        try:
-            output['highest_gust_1'] = decoded['highest_gust']['gust_1']['speed']['value']  # noqa
-        except Exception:
-            output['highest_gust_1'] = None
-        try:
-            output['highest_gust_2'] = decoded['highest_gust']['gust_2']['speed']['value']  # noqa
-        except Exception:
-            output['highest_gust_2'] = None
+        for idx in range(len(decoded.get('highest_gust'))):
+            fld_name = f'highest_gust_{idx + 1}'
+            try:
+                output[fld_name] = decoded['highest_gust'][idx]['speed']['value']  # noqa
+            except Exception:
+                output[fld_name] = None
 
     # ! SECTION 4
 
@@ -1151,46 +1036,41 @@ def parse_synop(message: str, year: int, month: int) -> dict:
 
     # Create number of s4 clouds variable, in case there are no s4 groups
     num_s4_clouds = 0
-
-    if decoded.get('section4') is not None:
-
+    if decoded.get('cloud_base_below_station') is not None:
         # Name the array of section 4 items
-        genus_array = decoded['section4']
-
+        genus_array = decoded['cloud_base_below_station']
         # Get the number of section 4 groups in the SYNOP message
         num_s4_clouds = len(genus_array)
-
         # For each cloud genus with base below station level...
         for i in range(num_s4_clouds):
-
             # Get cloud information codes
-            cloud_amount = genus_array[i][0]
-            cloud_genus = genus_array[i][1]
-            cloud_height = genus_array[i][2:4]
-            cloud_top = genus_array[i][4]
+            cloud_amount = genus_array[i]['cloud_cover']['value']
+            cloud_genus = genus_array[i]['genus']['_code']
+            cloud_height = genus_array[i]['upper_surface_altitude']['value']
+            cloud_top = genus_array[i]['description']['_code']
 
             #  We now take a different approach, by updating the template
             # dictionary keys where necessary
 
             # Now we convert the code string to an integer, and check that
             # there aren't missing values
-            if cloud_amount != '/':
+            if cloud_amount != None:
                 output[f'cloud_amount_s4_{i+1}'] = int(cloud_amount)
             else:
                 # Missing value
                 output[f'cloud_amount_s4_{i+1}'] = 15
 
-            if cloud_genus != '/':
+            if cloud_genus != None:
                 output[f'cloud_genus_s4_{i+1}'] = int(cloud_genus)
             else:
                 # Missing value
                 output[f'cloud_genus_s4_{i+1}'] = 63
 
-            if cloud_height != '//':
+            if cloud_height != None:
                 # Multiply by 100 to get metres (B/C1.5.2.4)
-                output[f'cloud_height_s4_{i+1}'] = int(cloud_height) * 100
+                output[f'cloud_height_s4_{i+1}'] = int(cloud_height)
 
-            if cloud_top != '/':
+            if cloud_top != None:
                 output[f'cloud_top_s4_{i+1}'] = int(cloud_top)
             else:
                 # Missing value
