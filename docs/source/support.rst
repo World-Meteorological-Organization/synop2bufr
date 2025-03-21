@@ -5,5 +5,5 @@ Support
 
 See discussion board and issues on GitHub:
 
-- `Discussion board <https://github.com/wmo-im/synop2bufr/discussions/>`_
-- `Issues <https://github.com/wmo-im/synop2bufr/issues>`_
+- `Discussion board <https://github.com/World-Meteorological-Organization/synop2bufr/discussions/>`_
+- `Issues <https://github.com/World-Meteorological-Organization/synop2bufr/issues>`_

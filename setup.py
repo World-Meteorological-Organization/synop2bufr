@@ -83,7 +83,7 @@ setup(
     platforms='all',
     keywords=' '.join(KEYWORDS),
     author='Rory Burke',
-    author_email='RBurke@wmo.int',
+    author_email='',
     maintainer='David I. Berry',
     maintainer_email='DBerry@wmo.int',
     install_requires=read('requirements.txt').splitlines(),

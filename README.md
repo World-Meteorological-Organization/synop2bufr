@@ -7,11 +7,11 @@ The synop2bufr Python module contains both a command line interface and API to c
 ### Requirements
 - Python 3 and above
 - [ecCodes](https://confluence.ecmwf.int/display/ECC)
-- [csv2bufr](https://github.com/wmo-im/csv2bufr)
+- [csv2bufr](https://github.com/World-Meteorological-Organization/csv2bufr)
 
 ### Dependencies
 
-Dependencies are listed in [requirements.txt](https://github.com/wmo-im/synop2bufr/blob/main/requirements.txt). Dependencies are automatically installed during synop2bufr installation.
+Dependencies are listed in [requirements.txt](https://github.com/World-Meteorological-Organization/synop2bufr/blob/main/requirements.txt). Dependencies are automatically installed during synop2bufr installation.
 
 ### Setting Environment Variables
 
@@ -270,7 +270,7 @@ rm -fr build dist *.egg-info
 python setup.py sdist bdist_wheel --universal
 twine upload dist/*
 
-# publish release on GitHub (https://github.com/wmo-im/synop2bufr/releases/new)
+# publish release on GitHub (https://github.com/World-Meteorological-Organization/synop2bufr/releases/new)
 
 # bump version back to dev
 vi synop2bufr/__init__.py  # update __version__
@@ -287,7 +287,7 @@ The full documentation for synop2bufr can be found at [https://synop2bufr.readth
 
 ### Bugs and Issues
 
-All bugs, enhancements and issues are managed on [GitHub](https://github.com/wmo-im/synop2bufr/issues).
+All bugs, enhancements and issues are managed on [GitHub](https://github.com/World-Meteorological-Organization/synop2bufr/issues).
 
 ## Contact
 

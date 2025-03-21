@@ -13,7 +13,7 @@ The following Python packages are required by the synop2bufr module:
 
 * `eccodes <https://pypi.org/project/eccodes/>`__ (NOTE: this is separate from the ecCodes library)
 * `pymetdecoder <https://github.com/antarctica/pymetdecoder>`__ Python module from the British Antarctic Survey (BAS) to decode the WMO FM-12 SYNOP format. A fork (https://github.com/wmo-im/pymetdecoder) of the module is currently used pending an update to the original.
-* `csv2bufr <https://github.com/wmo-im/csv2bufrr>`__ Python module to create BUFR from CSV input based on the ecCodes library.
+* `csv2bufr <https://github.com/World-Meteorological-Organization/csv2bufr>`__ Python module to create BUFR from CSV input based on the ecCodes library.
 
 Additionally, the command line interface to synop2bufr requires:
 
@@ -42,7 +42,7 @@ Alternatively, synop2bufr can be installed from source. First clone the reposito
 
 .. code-block:: bash
 
-   git clone https://github.com/wmo-im/synop2bufr.git
+   git clone https://github.com/World-Meteorological-Organization/synop2bufr.git
    cd synop2bufr
 
 You can then run synop2bufr from an ecCodes base image as follows:
