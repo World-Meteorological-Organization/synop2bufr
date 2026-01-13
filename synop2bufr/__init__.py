@@ -1317,7 +1317,8 @@ def transform(data: str, metadata: str, year: int,
                                     f" {tsi} in station list file"))
                     warning_msgs.append(("Duplicate entries found for station"
                                         f" {tsi} in station list file"))
-                tsi_mapping[tsi] = wsi
+                if tsi is not None and tsi != "": 
+                    tsi_mapping[tsi] = wsi
             except Exception as e:
                 LOGGER.error(e)
                 error_msgs.append(str(e))
