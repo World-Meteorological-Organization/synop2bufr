@@ -27,6 +27,7 @@ import logging
 import math
 import os
 import re
+from contextvars import ContextVar
 from typing import Iterator
 
 # Now import pymetdecoder and csv2bufr
@@ -37,20 +38,19 @@ __version__ = '0.7.0_dev'
 
 LOGGER = logging.getLogger(__name__)
 
-# Global arrays to store warnings and errors
-warning_msgs = []
-error_msgs = []
+_warnings_var: ContextVar[list] = ContextVar('_warnings', default=None)
+_errors_var: ContextVar[list] = ContextVar('_errors', default=None)
 
 # ! Configure the pymetdecoder/csv2bufr loggers to append warnings to the array
 
 
 class ArrayHandler(logging.Handler):
 
-    # The emit method will be called every time there is a log
     def emit(self, record):
-        # If log level is warning, append to the warnings messages array
         if record.levelname == "WARNING":
-            warning_msgs.append(self.format(record))
+            warnings = _warnings_var.get()
+            if warnings is not None:
+                warnings.append(self.format(record))
 
 
 # Create instance of array handler
@@ -145,9 +145,6 @@ def parse_synop(message: str, year: int, month: int) -> dict:
 
     :returns: `dict` of parsed SYNOP message
     """
-    # Make warning messages array global
-    # global warning_msgs
-
     # Get the full output decoded message from the pymetdecoder package
     try:
         decoded = synop.SYNOP().decode(message)
@@ -348,7 +345,9 @@ def parse_synop(message: str, year: int, month: int) -> dict:
         # log a warning and set both values to None
         if A < D:
             LOGGER.warning(f"Reported dewpoint temperature {D} is greater than the reported air temperature {A}. Elements set to missing")  # noqa
-            warning_msgs.append(f"Reported dewpoint temperature {D} is greater than the reported air temperature {A}. Elements set to missing")  # noqa
+            _w = _warnings_var.get()
+            if _w is not None:
+                _w.append(f"Reported dewpoint temperature {D} is greater than the reported air temperature {A}. Elements set to missing")  # noqa
 
             output['air_temperature'] = None
             output['dewpoint_temperature'] = None
@@ -1161,17 +1160,10 @@ def transform(data: str, metadata: str, year: int,
 
     :returns: iterator
     """
-    # =============================================
-    # Make warning and error messages array global
-    # =============================================
-    global warning_msgs
-    global error_msgs
+    _warnings_var.set([])
+    _errors_var.set([])
 
     # Boolean to ensure environment variable warning is only displayed once
-    # Note: The resetting of the warning_msgs array for
-    # each report necessitates this approach, because
-    # we want to ensure the warning is only appended
-    # to the first conversion
     can_var_info_be_displayed = True
 
     # ===================
@@ -1194,14 +1186,14 @@ def transform(data: str, metadata: str, year: int,
                 if tsi in tsi_mapping:
                     LOGGER.warning(("Duplicate entries found for station"
                                     f" {tsi} in station list file"))
-                    warning_msgs.append(("Duplicate entries found for station"
-                                        f" {tsi} in station list file"))
+                    _warnings_var.get().append(("Duplicate entries found for station"
+                                               f" {tsi} in station list file"))
                 # only add tsi if not empty
                 if tsi is not None and tsi != "":
                     tsi_mapping[tsi] = wsi
             except Exception as e:
                 LOGGER.error(e)
-                error_msgs.append(str(e))
+                _errors_var.get().append(str(e))
 
         fh.close()
     else:
@@ -1228,7 +1220,7 @@ def transform(data: str, metadata: str, year: int,
             messages = extract_individual_synop(gts_msg)
         except Exception as e:
             LOGGER.error(e)
-            error_msgs.append(str(e))
+            _errors_var.get().append(str(e))
             messages = []  # Fallback to an empty list if no reports extracted
             yield {
                 "_meta": {
@@ -1244,16 +1236,16 @@ def transform(data: str, metadata: str, year: int,
                     "result": {
                         "code": FAILED,
                         "message": "Error encoding, BUFR set to None",
-                        "warnings": warning_msgs,
-                        "errors": error_msgs
+                        "warnings": _warnings_var.get(),
+                        "errors": _errors_var.get()
                     },
                     "template": None,
                     "csv": None
                 }
             }
-            # Reset warning and error messages array for next iteration
-            warning_msgs = []
-            error_msgs = []
+            # Reset warning and error messages for next iteration
+            _warnings_var.set([])
+            _errors_var.set([])
 
         # Count how many conversions were successful using a dictionary
         conversion_success = {}
@@ -1272,7 +1264,7 @@ def transform(data: str, metadata: str, year: int,
             if match:
                 LOGGER.warning(
                     f"NIL report detected for station {match.group(1)}, no BUFR file created.")  # noqa
-                warning_msgs.append(
+                _warnings_var.get().append(
                     f"NIL report detected for station {match.group(1)}, no BUFR file created.")  # noqa
                 continue
 
@@ -1289,7 +1281,7 @@ def transform(data: str, metadata: str, year: int,
             except Exception as e:
                 LOGGER.error(
                     f"Error parsing SYNOP report: {message}. {str(e)}!")
-                error_msgs.append(f"Error parsing SYNOP report: {message}. {str(e)}!")  # noqa
+                _errors_var.get().append(f"Error parsing SYNOP report: {message}. {str(e)}!")  # noqa
                 result = {
                     "_meta": {
                         "id": None,
@@ -1304,17 +1296,17 @@ def transform(data: str, metadata: str, year: int,
                         "result": {
                             "code": FAILED,
                             "message": "Error encoding, BUFR set to None",
-                            "warnings": warning_msgs,
-                            "errors": error_msgs
+                            "warnings": _warnings_var.get(),
+                            "errors": _errors_var.get()
                         },
                         "template": None,
                         "csv": None
                     }
                 }
                 yield result
-                # Reset warning and error messages array for next iteration
-                warning_msgs = []
-                error_msgs = []
+                # Reset warning and error messages for next iteration
+                _warnings_var.set([])
+                _errors_var.set([])
                 continue
 
             # Now determine and load the appropriate mappings
@@ -1338,7 +1330,7 @@ def transform(data: str, metadata: str, year: int,
             except Exception:
                 conversion_success[tsi] = False
                 LOGGER.warning(f"Station {tsi} not found in station file")
-                warning_msgs.append(f"Station {tsi} not found in station file")
+                _warnings_var.get().append(f"Station {tsi} not found in station file")
                 result = {
                     "_meta": {
                         "id": None,
@@ -1353,17 +1345,17 @@ def transform(data: str, metadata: str, year: int,
                         "result": {
                             "code": FAILED,
                             "message": "Error encoding, BUFR set to None",
-                            "warnings": warning_msgs,
-                            "errors": error_msgs
+                            "warnings": _warnings_var.get(),
+                            "errors": _errors_var.get()
                         },
                         "template": None,
                         "csv": None
                     }
                 }
                 yield result
-                # Reset warning and error messages array for next iteration
-                warning_msgs = []
-                error_msgs = []
+                # Reset warning and error messages for next iteration
+                _warnings_var.set([])
+                _errors_var.set([])
                 continue
 
             def truncate_to_twenty(name: str) -> str:
@@ -1411,13 +1403,13 @@ def transform(data: str, metadata: str, year: int,
 
                 if wsi == "":
                     LOGGER.warning(f"Missing WSI for station {tsi}")
-                    warning_msgs.append(f"Missing WSI for station {tsi}")
+                    _warnings_var.get().append(f"Missing WSI for station {tsi}")
                 else:
                     # If station has not been found in the station
                     # list, don't repeat warning unnecessarily
-                    if f"Station {tsi} not found in station file" not in warning_msgs:  # noqa
+                    if f"Station {tsi} not found in station file" not in _warnings_var.get():  # noqa
                         LOGGER.warning(f"Invalid metadata for station {tsi} found in station file, unable to parse")  # noqa
-                        warning_msgs.append(f"Invalid metadata for station {tsi} found in station file, unable to parse")  # noqa
+                        _warnings_var.get().append(f"Invalid metadata for station {tsi} found in station file, unable to parse")  # noqa
 
             # Add information to the mappings
             if conversion_success[tsi]:
@@ -1548,7 +1540,7 @@ def transform(data: str, metadata: str, year: int,
                 except Exception as e:
                     LOGGER.error(e)
                     LOGGER.error(f"Missing station height for station {tsi}")
-                    error_msgs.append(
+                    _errors_var.get().append(
                         f"Missing station height for station {tsi}")
                     conversion_success[tsi] = False
 
@@ -1573,8 +1565,8 @@ def transform(data: str, metadata: str, year: int,
                 except Exception as e:
                     LOGGER.error(e)
                     LOGGER.error("Error creating BUFRMessage")
-                    error_msgs.append(str(e))
-                    error_msgs.append("Error creating BUFRMessage")
+                    _errors_var.get().append(str(e))
+                    _errors_var.get().append("Error creating BUFRMessage")
                     conversion_success[tsi] = False
 
             if conversion_success[tsi]:
@@ -1585,8 +1577,8 @@ def transform(data: str, metadata: str, year: int,
                 except Exception as e:
                     LOGGER.error(e)
                     LOGGER.error("Error parsing message")
-                    error_msgs.append(str(e))
-                    error_msgs.append("Error parsing message")
+                    _errors_var.get().append(str(e))
+                    _errors_var.get().append("Error parsing message")
                     conversion_success[tsi] = False
 
             if conversion_success[tsi]:
@@ -1611,25 +1603,25 @@ def transform(data: str, metadata: str, year: int,
                 except Exception:
                     LOGGER.warning(
                         f"Unable to write report of station {tsi} to CSV")
-                    warning_msgs.append(f"Unable to write report of station {tsi} to CSV")  # noqa
+                    _warnings_var.get().append(f"Unable to write report of station {tsi} to CSV")  # noqa
 
                 try:
                     result["bufr4"] = message.as_bufr()  # encode to BUFR
                     status = {"code": PASSED,
-                              "warnings": warning_msgs,
-                              "errors": error_msgs}
+                              "warnings": _warnings_var.get(),
+                              "errors": _errors_var.get()}
 
                 except Exception as e:
                     LOGGER.error("Error encoding BUFR, null returned")
-                    error_msgs.append("Error encoding BUFR, null returned")
+                    _errors_var.get().append("Error encoding BUFR, null returned")
                     LOGGER.error(e)
-                    error_msgs.append(str(e))
+                    _errors_var.get().append(str(e))
                     result["bufr4"] = None
                     status = {
                         "code": FAILED,
                         "message": "Error encoding, BUFR set to None",
-                        "warnings": warning_msgs,
-                        "errors": error_msgs
+                        "warnings": _warnings_var.get(),
+                        "errors": _errors_var.get()
                     }
                     conversion_success[tsi] = False
 
@@ -1674,8 +1666,8 @@ def transform(data: str, metadata: str, year: int,
                         "result": {
                             "code": FAILED,
                             "message": "Error encoding, BUFR set to None",
-                            "warnings": warning_msgs,
-                            "errors": error_msgs
+                            "warnings": _warnings_var.get(),
+                            "errors": _errors_var.get()
                         },
                         "template": None,
                         "csv": None
@@ -1685,9 +1677,9 @@ def transform(data: str, metadata: str, year: int,
             # Now yield result back to caller
             yield result
 
-            # Reset warning and error messages array for next iteration
-            warning_msgs = []
-            error_msgs = []
+            # Reset warning and error messages for next iteration
+            _warnings_var.set([])
+            _errors_var.set([])
 
             # Output conversion status to user
             if conversion_success[tsi]:
