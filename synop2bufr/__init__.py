@@ -146,7 +146,7 @@ def parse_synop(message: str, year: int, month: int) -> dict:
     :returns: `dict` of parsed SYNOP message
     """
     # Make warning messages array global
-    global warning_msgs
+    # global warning_msgs
 
     # Get the full output decoded message from the pymetdecoder package
     try:
