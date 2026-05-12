@@ -1186,8 +1186,7 @@ def transform(data: str, metadata: str, year: int,
                 if tsi in tsi_mapping:
                     LOGGER.warning(("Duplicate entries found for station"
                                     f" {tsi} in station list file"))
-                    _warnings_var.get().append(("Duplicate entries found for station"
-                                               f" {tsi} in station list file"))
+                    _warnings_var.get().append((f"Duplicate entries found for station {tsi} in station list file"))  # noqa
                 # only add tsi if not empty
                 if tsi is not None and tsi != "":
                     tsi_mapping[tsi] = wsi
@@ -1330,7 +1329,7 @@ def transform(data: str, metadata: str, year: int,
             except Exception:
                 conversion_success[tsi] = False
                 LOGGER.warning(f"Station {tsi} not found in station file")
-                _warnings_var.get().append(f"Station {tsi} not found in station file")
+                _warnings_var.get().append(f"Station {tsi} not found in station file")  # noqa
                 result = {
                     "_meta": {
                         "id": None,
@@ -1403,7 +1402,7 @@ def transform(data: str, metadata: str, year: int,
 
                 if wsi == "":
                     LOGGER.warning(f"Missing WSI for station {tsi}")
-                    _warnings_var.get().append(f"Missing WSI for station {tsi}")
+                    _warnings_var.get().append(f"Missing WSI for station {tsi}")  # noqa
                 else:
                     # If station has not been found in the station
                     # list, don't repeat warning unnecessarily
@@ -1613,7 +1612,7 @@ def transform(data: str, metadata: str, year: int,
 
                 except Exception as e:
                     LOGGER.error("Error encoding BUFR, null returned")
-                    _errors_var.get().append("Error encoding BUFR, null returned")
+                    _errors_var.get().append("Error encoding BUFR, null returned")  # noqa
                     LOGGER.error(e)
                     _errors_var.get().append(str(e))
                     result["bufr4"] = None
