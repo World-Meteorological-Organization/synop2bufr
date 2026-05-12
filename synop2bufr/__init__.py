@@ -146,7 +146,7 @@ def parse_synop(message: str, year: int, month: int) -> dict:
     :returns: `dict` of parsed SYNOP message
     """
     # Make warning messages array global
-    global warning_msgs
+    # global warning_msgs
 
     # Get the full output decoded message from the pymetdecoder package
     try:
@@ -1317,7 +1317,9 @@ def transform(data: str, metadata: str, year: int,
                                     f" {tsi} in station list file"))
                     warning_msgs.append(("Duplicate entries found for station"
                                         f" {tsi} in station list file"))
-                tsi_mapping[tsi] = wsi
+                # only add tsi if not empty
+                if tsi is not None and tsi != "":
+                    tsi_mapping[tsi] = wsi
             except Exception as e:
                 LOGGER.error(e)
                 error_msgs.append(str(e))
