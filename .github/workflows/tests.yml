@@ -6,7 +6,7 @@ jobs:
   main:
     runs-on: ubuntu-latest
     container:
-      image: wmoim/dim_eccodes_baseimage:noble_eccodes-2.44
+      image: wmoim/dim_eccodes_baseimage:noble_eccodes-2.47
     env:
       BUFR_ORIGINATING_CENTRE: 65535
       BUFR_ORIGINATING_SUBCENTRE: 65535
