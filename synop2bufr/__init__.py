@@ -448,7 +448,10 @@ def parse_synop(message: str, year: int, month: int) -> dict:
     if decoded.get('past_weather') is not None:
         for idx in range(len(decoded.get('past_weather'))):
             fld_name = f'past_weather_{idx+1}'
-            output[fld_name] = decoded['past_weather'][idx]['value']  # noqa
+            if decoded['past_weather'][idx] is None:
+                output[fld_name] = None
+            else:
+                output[fld_name] = decoded['past_weather'][idx]['value']  # noqa
     else:  # Missing values
         output['past_weather_1'] = None
         output['past_weather_2'] = None
