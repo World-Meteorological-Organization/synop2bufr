@@ -34,14 +34,12 @@ from typing import Iterator
 from pymetdecoder import synop
 from csv2bufr import BUFRMessage
 
-__version__ = '0.8.0'
+__version__ = '0.8.1'
 
 LOGGER = logging.getLogger(__name__)
 
 _warnings_var: ContextVar[list] = ContextVar('_warnings', default=None)
 _errors_var: ContextVar[list] = ContextVar('_errors', default=None)
-
-# ! Configure the pymetdecoder/csv2bufr loggers to append warnings to the array
 
 
 class ArrayHandler(logging.Handler):
